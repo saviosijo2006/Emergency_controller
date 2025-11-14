@@ -1,0 +1,57 @@
+#include <webots/robot.h>          
+#include <webots/microphone.h>     
+#include <stdio.h>                 
+#include <math.h>                  
+
+// Time between sensor updates (32ms is standard for Webots)
+#define TIME_STEP 32
+
+// Sound threshold for emergency detection
+// I gave this to if Loud noise greater than threshold
+#define THRESHOLD 200.0
+
+int main() {
+  wb_robot_init();  // Start the robot controller
+
+  //The microphone device from Webots
+  WbDeviceTag mic = wb_robot_get_device("microphone");
+
+  // Enable microphone so it starts collecting sound samples
+  wb_microphone_enable(mic, TIME_STEP);
+
+  // Main loop keeps running while simulation is active
+  while (wb_robot_step(TIME_STEP) != -1) {
+
+    // Read all microphone samples from this timestep
+    const short *buffer = wb_microphone_get_sample_buffer(mic);
+
+    // Make sure buffer is not empty
+    if (buffer != NULL) {
+
+      // Number of audio samples recorded in this timestep
+      int samples = wb_microphone_get_sample_size(mic);
+
+      // Variable to store loudest detected value
+      double max_value = 0;
+
+      // Loop through every sound sample in this timestep
+      for (int i = 0; i < samples; i++) {
+
+        // Convert sample to positive number (absolute value)
+        double v = fabs(buffer[i]);
+
+        // Track the loudest sound detected
+        if (v > max_value)
+          max_value = v;
+      }
+
+      // If loud noise exceeds threshold → EMERGENCY!
+      if (max_value > THRESHOLD) {
+        printf("EMERGENCY: 'EMERGENCY' Loud noise detected! Value = %f\n", max_value);
+      }
+    }
+  }
+
+  wb_robot_cleanup();  // End and clean Webots controller     
+  return 0;
+}
